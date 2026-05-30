@@ -1,0 +1,135 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "srvcs-rollingaverage",
+    "description": "",
+    "license": {
+      "name": "Apache-2.0",
+      "identifier": "Apache-2.0"
+    },
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/": {
+      "get": {
+        "tags": [],
+        "summary": "`GET /` — service identity (srvcs service standard).",
+        "operationId": "index",
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Info"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": [],
+        "summary": "`POST /` — the rolling (sliding-window) average of a list of numbers.",
+        "description": "This service is a pure orchestrator: it delegates the entire computation to\n`srvcs-movingaverage`, whose `result` (a JSON array of `f64`s) it returns\nverbatim. So `rollingaverage({values: [1,2,3,4], window: 2})` is\n`[1.5, 2.5, 3.5]`.\n\nIt does no validation of its own — `window` range checks and element\nvalidation are propagated from `srvcs-movingaverage`'s `422`.",
+        "operationId": "evaluate",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/EvalRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/RollingAverageResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "window out of range, or a dependency rejected an input (forwarded)"
+          },
+          "500": {
+            "description": "a dependency returned a malformed result"
+          },
+          "503": {
+            "description": "a dependency is unavailable"
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "EvalRequest": {
+        "type": "object",
+        "required": [
+          "values",
+          "window"
+        ],
+        "properties": {
+          "values": {
+            "type": "object",
+            "description": "The list of numbers to slide a window over."
+          },
+          "window": {
+            "type": "integer",
+            "format": "int64",
+            "description": "The window size. Must be `>= 1` and `<= values.len()`."
+          }
+        }
+      },
+      "Info": {
+        "type": "object",
+        "required": [
+          "service",
+          "concern",
+          "depends_on"
+        ],
+        "properties": {
+          "concern": {
+            "type": "string"
+          },
+          "depends_on": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "service": {
+            "type": "string"
+          }
+        }
+      },
+      "RollingAverageResponse": {
+        "type": "object",
+        "required": [
+          "values",
+          "window",
+          "result"
+        ],
+        "properties": {
+          "result": {
+            "type": "object",
+            "description": "The list of windowed averages, as `f64`s."
+          },
+          "values": {
+            "type": "object"
+          },
+          "window": {
+            "type": "integer",
+            "format": "int64"
+          }
+        }
+      }
+    }
+  }
+}
